@@ -1,0 +1,10 @@
+g++ -g main.cpp kd_tree.cpp -o main.o
+
+gdb main.o
+
+b kd_tree.cpp:22  --> breakpoint on another file
+
+https://www.tutorialspoint.com/gnu_debugger/gdb_commands.htm  --> more info
+
+
+
