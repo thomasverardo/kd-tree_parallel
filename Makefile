@@ -17,7 +17,10 @@ run_ompi:
 	mpirun -np $(np) ./main_mpi.x 
 
 run_ompi2: 
-	mpirun -np 1 ./main_mpi.x 
+	mpirun -np 4 ./main_mpi.x 
+
+val_ompi2:
+	mpirun -np 4 valgrind -s ./main_mpi.x
 
 clean:
 	rm *.x
