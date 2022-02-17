@@ -41,7 +41,7 @@ int main(int argc, char **argv){
             
 
 
-    int ndim = N_DIM, n=8;
+    int ndim = N_DIM, n=1000000;
     int start_axis = 1;
 
     auto points = generatePoints<int>(ndim, n);
@@ -52,32 +52,41 @@ int main(int argc, char **argv){
     struct kdnode<int>* kdtree;
 
     start = std::chrono::high_resolution_clock::now();
-    mpi_start = MPI_Wtime();
+    // mpi_start = MPI_Wtime();
 
     
 
     kdtree = build_parallel_kdtree<int>(points, ndim, start_axis, size, 0, MPI_COMM_WORLD);
 
     end = std::chrono::high_resolution_clock::now();
-    mpi_end = MPI_Wtime();
+    // mpi_end = MPI_Wtime();
 
     
 
     std::chrono::duration<double> diff = end - start;
-    double total_mpi = mpi_end - mpi_start;
+    // double total_mpi = mpi_end - mpi_start;
 
-    // std::cout<<"\nTime to buld the tree: "<<diff.count() <<" s";
+    std::cout<<"\nTime to buld the tree: "<<diff.count() <<" s";
     // std::cout<<"\nMPI time: "<<total_mpi<<std::endl;
 
-    kdtree -> pre_order();
+    // kdtree -> pre_order();
 
-    std::string kdtree_ser = serialize_node(kdtree);
 
-    std::cout<<std::endl<<std::endl<<kdtree_ser<<std::endl<<std::endl;
+    // mpi_start = MPI_Wtime();
+    // // start = std::chrono::high_resolution_clock::now();
+    // std::string kdtree_ser = serialize_node(kdtree);
 
-    auto aaaa = deserialize_node<int>(kdtree_ser);
+    // // std::cout<<std::endl<<std::endl<<kdtree_ser<<std::endl<<std::endl;
 
-    aaaa -> pre_order();
+    // auto aaaa = deserialize_node<int>(kdtree_ser);
+    // // end = std::chrono::high_resolution_clock::now();
+    // mpi_end = MPI_Wtime();
+
+    // double total_mpi = mpi_end - mpi_start;
+    // std::cout<<"\nTime to buld the tree: "<<total_mpi <<" s";
+
+    // aaaa -> pre_order();
+
 
     
     MPI_Finalize();
