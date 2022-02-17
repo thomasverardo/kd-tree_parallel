@@ -41,7 +41,7 @@ int main(int argc, char **argv){
             
 
 
-    int ndim = N_DIM, n=150;
+    int ndim = N_DIM, n=15;
     int start_axis = 1;
 
     auto points = generatePoints<int>(ndim, n);
@@ -66,7 +66,7 @@ int main(int argc, char **argv){
 
     
 
-    kdtree = build_parallel_kdtree2<int>(points, ndim, start_axis, size, 0, MPI_COMM_WORLD);
+    kdtree = build_parallel_kdtree3<int>(points, ndim, start_axis, size, 0, MPI_COMM_WORLD, 1);
 
     end = std::chrono::high_resolution_clock::now();
     // mpi_end = MPI_Wtime();
