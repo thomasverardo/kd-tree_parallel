@@ -290,7 +290,7 @@ struct kdnode<T> * deserialize_node(std::string data){
 
 
 
-
+// version 4.0
 //funziona ma è poco più veloce perché prende i processore pari e dispari più veloce (migliore di 0.4 s rispetto ad utilizzare solo 1 o 2)
 template<typename T>
 struct kdnode<T> * build_parallel_kdtree4(std::vector<struct kpoint<T>> points, int ndim, int axis, int np, int level, MPI_Comm comm, int which){
@@ -540,6 +540,7 @@ struct kdnode<T> * build_parallel_kdtree4(std::vector<struct kpoint<T>> points, 
 
 //////////////   pari o dispari   ///////////////////
 
+//version 3.0
 // version taking all pari or all dispari
 // not working
 template<typename T>
@@ -694,13 +695,9 @@ struct kdnode<T> * build_parallel_kdtree3(std::vector<struct kpoint<T>> points, 
                 //recive from left (1)
                 int flag = 0, count;
             
-                // while (!flag) { //wait the message from 1
                     //MPI_Probe for dynamic reciving size of the message
                     //It's also possible to send a second message with the size, 
-                    // but it's faster now
-                    // MPI_Iprobe(1, 0, comm, &flag, &status);
-                    MPI_Probe(1, 10, comm, &status);  // Probe for an incoming message from process 1
-                // }
+                    MPI_Probe(MPI_ANY_SOURCE, 10, comm, &status);  // Probe for an incoming message from process 1
 
                 // When probe returns, the status object has the size and other
                 // attributes of the incoming message. Get the message size
@@ -722,10 +719,8 @@ struct kdnode<T> * build_parallel_kdtree3(std::vector<struct kpoint<T>> points, 
                 //recive from right (2)
                 flag = 0;
             
-                // while (!flag) { //wait the message from 2
-                    // MPI_Iprobe(2, 0, comm, &flag, &status);
-                    MPI_Probe(2, 20, comm, &status);
-                // }
+
+                    MPI_Probe(MPI_ANY_SOURCE, 20, comm, &status);
 
                 MPI_Get_count( &status, MPI_CHAR, &count); //or MPI_CHAR
                 char *buf2 = new char[count];
@@ -771,7 +766,7 @@ struct kdnode<T> * build_parallel_kdtree3(std::vector<struct kpoint<T>> points, 
 
 
 
-
+// version 2.0
 // VERSION SENDING FROM 0 OR 1
 //good
 template<typename T>

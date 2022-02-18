@@ -29,7 +29,7 @@ std::vector<struct kpoint<T>> generatePoints(const int ndim, const int npoints){
 
 int main(){
 
-    int ndim = N_DIM, n=10000000;
+    int ndim = N_DIM, n=1000000;
 
     auto points = generatePoints<int>(ndim, n);
 
@@ -37,7 +37,7 @@ int main(){
     std::chrono::time_point<std::chrono::high_resolution_clock> end;
     struct kdnode<int>* kdtree;
 
-    #pragma omp parallel shared(points) private(start, end)//copyin( task_cutoff, insertion_cutoff )
+    #pragma omp parallel shared(points) private(start, end)
     {
         #pragma omp single
         {
@@ -50,7 +50,8 @@ int main(){
 
             std::chrono::duration<double> diff = end - start;
 
-            std::cout<<"\nTime to buld the tree: "<<diff.count() <<" s\n";
+            // std::cout<<"\nTime to buld the tree: "<<diff.count() <<" s\n";
+            std::cout<<diff.count();
         }
     }
     

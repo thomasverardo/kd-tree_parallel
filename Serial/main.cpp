@@ -45,7 +45,8 @@ int main(){
 
     std::chrono::duration<double> diff = end - start;
 
-    std::cout<<"\nTime to buld the tree in serial: "<<diff.count() <<" s\n";
+    // std::cout<<"\nTime to buld the tree in serial: "<<diff.count() <<" s\n";
+    std::cout<<diff.count();
 
     return 0;
 }
