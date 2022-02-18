@@ -41,7 +41,7 @@ int main(int argc, char **argv){
             
 
 
-    int ndim = N_DIM, n=15;
+    int ndim = N_DIM, n=1000000;
     int start_axis = 1;
 
     auto points = generatePoints<int>(ndim, n);
@@ -54,11 +54,13 @@ int main(int argc, char **argv){
 
 
     //for fun
-    if(irank == 3){
-        kdtree = build_serial_kdtree<int>(points, ndim, start_axis);
-        std::string kd_str = serialize_node(kdtree);
-        std::cout<<"\nSERIAL KDTREE: "<<kd_str;
-    }
+    #ifdef DEBUG
+        if(irank == 3){
+            kdtree = build_serial_kdtree<int>(points, ndim, start_axis);
+            std::string kd_str = serialize_node(kdtree);
+            std::cout<<"\nSERIAL KDTREE: "<<kd_str;
+        }
+    #endif
         
 
     start = std::chrono::high_resolution_clock::now();
@@ -98,15 +100,13 @@ int main(int argc, char **argv){
     // if(irank == 0)
         // kdtree -> pre_order();
 
-    if(irank == 0){
-        std::string kd_str = serialize_node(kdtree);
-        std::cout<<"\nPARALLEL KDTREE: "<<kd_str;
-    }
-
-    
     #ifdef DEBUG
-        // std::cout<<kdtree -> split.print_kpoints(1)<<std::endl;
+        if(irank == 0){
+            std::string kd_str = serialize_node(kdtree);
+            std::cout<<"\nPARALLEL KDTREE: "<<kd_str;
+        }
     #endif
+    
 
 
     
