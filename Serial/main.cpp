@@ -28,7 +28,7 @@ std::vector<struct kpoint<T>> generatePoints(const int ndim, const int npoints){
 }
 
 int main(){
-
+//1000000
     int ndim = N_DIM, n=1000000;
 
     auto points = generatePoints<int>(ndim, n);

@@ -3,7 +3,7 @@
 #include "kd_tree.hpp"
 #include <vector>
 
-#define NDIM 2
+// #define NDIM 3
 
 //class kpoint
 template<typename T>
