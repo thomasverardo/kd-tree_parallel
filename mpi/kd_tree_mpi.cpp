@@ -287,9 +287,263 @@ struct kdnode<T> * deserialize_node(std::string data){
 
 
 
+
+
+
+
 //funziona ma è poco più veloce perché prende i processore pari e dispari più veloce (migliore di 0.4 s rispetto ad utilizzare solo 1 o 2)
 template<typename T>
-struct kdnode<T> * build_parallel_kdtree3(std::vector<struct kpoint<T>> points, int ndim, int axis, int np, int level, MPI_Comm comm, int which){
+struct kdnode<T> * build_parallel_kdtree4(std::vector<struct kpoint<T>> points, int ndim, int axis, int np, int level, MPI_Comm comm, int which){
+
+    //IT ONLY ACCEPT NP POWER OF 2
+
+    
+
+
+    int size, irank;
+    // MPI_Comm_size(comm, &size);
+    MPI_Comm_rank(comm, &irank);
+
+    MPI_Status status;
+    MPI_Request request;
+
+    struct kdnode<T>* node = new kdnode<T>; 
+    const int N = points.size();
+    int myaxis = (axis+1) % ndim;
+
+    if ( N == 1 ){
+
+        #ifdef DEBUG
+            // std::cout<<"\n Processor n: "<<irank<<", axis = "<<myaxis;
+        #endif
+
+        node->left = new kdnode<T>;
+        node->right = new kdnode<T>;
+        node->axis = myaxis;
+        node->split = points.at(0);
+
+    }else {
+        
+
+        auto mypoint = choose_splitting_point( points, N, myaxis);
+        // the splitting point
+        int half = N/2;
+        node->axis = myaxis;
+        node->split = mypoint.at(half);
+        
+        
+        if ( irank != 0){
+
+            //aspetta che arrivi il messaggio e da lì parte a fare l'albero
+            //fa l'albero
+            //manda a 0
+
+
+            if ( np/2 != pow(2, level)) {
+
+                //al posto di creare ogni volta, si potrebbe usare sempre lo stesso e prendere da una parte all'altra
+                std::vector<struct kpoint<T>> left_points(mypoint.begin(), mypoint.begin() + half);
+                std::vector<struct kpoint<T>> right_points(mypoint.begin() + half + 1, mypoint.end());
+                //+1 so we can delet the splitting point
+
+                // to opt to save a pointer, instead
+                level = level + 1;
+                //send var which same to left
+                node->left = build_parallel_kdtree4( left_points, ndim, myaxis, np, level, comm, which);
+                
+                //sent var which + 1 to right
+                which = which + 2;
+                if( N != 2)
+                    node -> right = build_parallel_kdtree4( right_points, ndim, myaxis, np, level, comm, which);
+                else
+                    node -> right = new kdnode<T>;
+
+
+
+            }else{
+
+                
+
+                if( irank == which ){
+
+                    //al posto di creare ogni volta, si potrebbe usare sempre lo stesso e prendere da una parte all'altra
+                    std::vector<struct kpoint<T>> left_points(mypoint.begin(), mypoint.begin() + half);
+                    
+                    #ifdef DEBUG
+                        // std::cout<<"\tVector on 1: "<<left_points.size();
+                    #endif
+
+                        //return same level, so it will goes forever in the previous else
+                    node -> left = build_serial_kdtree(left_points, ndim, myaxis);
+
+                    std::string kdtree_str = serialize_node<T>(node -> left);
+                    // MPI_Isend( kdtree_str.c_str() , kdtree_str.length() , MPI_CHAR , 0 , 10 , comm, &request );
+                    MPI_Send( kdtree_str.c_str() , kdtree_str.length() , MPI_CHAR , 0 , 10 , comm );
+                    
+                    #ifdef DEBUG
+                        std::cout<<"\n Processor n: "<<irank<<" AFTER SEND";
+                    #endif
+                }
+                
+                //sarebbe da distribuire al primo libero
+                if ( which < np-1 ) // quindi si può fare
+                    which = which + 1;
+                else // se non si può fare, allora faccio lavorare un processore a caso, ovvero l'1
+                    // l'1 perché dovrebbe essere il primo ad aver finito, quello con meno lavoro e così da non creare conflitti
+                    which = 1;
+                
+
+                if( irank == which ){
+
+                //al posto di creare ogni volta, si potrebbe usare sempre lo stesso e prendere da una parte all'altra
+                std::vector<struct kpoint<T>> right_points(mypoint.begin() + half + 1, mypoint.end());
+                
+                #ifdef DEBUG
+                    // std::cout<<"\tVector on 2: "<<right_points.size();
+                #endif
+                //return same level, so it will goes forever in the previous else
+                if( N != 2)
+                    // node -> right = build_parallel_kdtree( right_points, ndim, myaxis, np, level, comm);
+                    node -> right = build_serial_kdtree(right_points, ndim, myaxis);
+                else
+                    node -> right = new kdnode<T>;
+
+                std::string kdtree_str = serialize_node<T>(node -> right);
+                // MPI_Isend( kdtree_str.c_str() , kdtree_str.length() , MPI_CHAR , 0 , 20 , comm, &request );
+                MPI_Send( kdtree_str.c_str() , kdtree_str.length() , MPI_CHAR , 0 , 20 , comm );             
+                
+                #ifdef DEBUG
+                    std::cout<<"\n Processor n: "<<irank<<" AFTER SEND";
+                #endif
+                }
+
+
+                
+
+            }
+
+
+
+            // meanwhile ..
+
+        } else if ( irank == 0) {
+            
+            if ( np/2 != pow(2, level)){
+
+                //al posto di creare ogni volta, si potrebbe usare sempre lo stesso e prendere da una parte all'altra
+                std::vector<struct kpoint<T>> left_points(mypoint.begin(), mypoint.begin() + half);
+                std::vector<struct kpoint<T>> right_points(mypoint.begin() + half + 1, mypoint.end());
+                //+1 so we can delet the splitting point
+
+                // to opt to save a pointer, instead
+                level = level + 1;
+                node->left = build_parallel_kdtree4( left_points, ndim, myaxis, np, level, comm, which);
+                
+                which = which + 2; // possibly omit
+                if( N != 2)
+                    node -> right = build_parallel_kdtree4( right_points, ndim, myaxis, np, level, comm, which);
+                else
+                    node -> right = new kdnode<T>;
+
+
+
+
+            }else{ //when it arrives at the good level
+
+                #ifdef DEBUG
+                    std::cout<<"\n Processor n "<<irank<<" BEFORE RECV ";
+                #endif
+                //recive from left (1)
+                int flag = 0, count;
+
+                //MPI_Probe for dynamic reciving size of the message
+                //It's also possible to send a second message with the size, 
+                // but it's faster now
+                MPI_Probe(which, 10, comm, &status);  // Probe for an incoming message from process 1
+
+                // When probe returns, the status object has the size and other
+                // attributes of the incoming message. Get the message size
+                MPI_Get_count( &status, MPI_CHAR, &count);
+                // Allocate a buffer to hold the incoming numbers
+                char *buf1 = new char[count];
+                MPI_Recv(buf1, count, MPI_CHAR, which, 10, comm, &status);
+                // MPI_Wait( &request , MPI_STATUS_IGNORE);
+                std::string bla1(buf1, count);
+                delete [] buf1;
+                node -> left = deserialize_node<T>(bla1);
+
+
+                #ifdef DEBUG
+                    std::cout<<"\n string "<<bla1<<" \nAFTER 1 RECV ";
+                #endif
+                
+                
+                //change which var
+                if ( which < np-1 ) // quindi si può fare
+                    which = which + 1;
+                else // se non si può fare, allora faccio lavorare un processore a caso, ovvero l'1
+                    // l'1 perché dovrebbe essere il primo ad aver finito, quello con meno lavoro e così da non creare conflitti
+                    which = 1;
+                
+        
+                //recive from right (2)
+                flag = 0;
+            
+                MPI_Probe(which, 20, comm, &status);
+
+                MPI_Get_count( &status, MPI_CHAR, &count); 
+                char *buf2 = new char[count];
+                MPI_Recv(buf2, count, MPI_CHAR, which, 20, comm, &status);  
+                std::string bla2(buf2, count);
+                delete [] buf2;
+                node -> right = deserialize_node<T>(bla2);
+
+                //then recive the nodes done
+
+                #ifdef DEBUG
+                    std::cout<<"\n string "<<bla2<<" \nAFTER 2 RECV ";
+                #endif
+
+                
+
+
+                
+
+            }
+
+
+        }
+
+
+
+    }
+    
+    return node;
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//////////////   pari o dispari   ///////////////////
+
+// version taking all pari or all dispari
+// not working
+template<typename T>
+struct kdnode<T> * build_parallel_kdtree3(std::vector<struct kpoint<T>> points, int ndim, int axis, int np, int level, MPI_Comm comm){
 
     //if np <=1 --> use serial kd_tree
 
@@ -346,10 +600,10 @@ struct kdnode<T> * build_parallel_kdtree3(std::vector<struct kpoint<T>> points, 
 
                 // to opt to save a pointer, instead
                 level = level + 1;
-                node->left = build_parallel_kdtree2( left_points, ndim, myaxis, np, level, comm);
+                node->left = build_parallel_kdtree3( left_points, ndim, myaxis, np, level, comm);
                 
                 if( N != 2)
-                    node -> right = build_parallel_kdtree2( right_points, ndim, myaxis, np, level, comm);
+                    node -> right = build_parallel_kdtree3( right_points, ndim, myaxis, np, level, comm);
                 else
                     node -> right = new kdnode<T>;
 
@@ -409,11 +663,237 @@ struct kdnode<T> * build_parallel_kdtree3(std::vector<struct kpoint<T>> points, 
 
 
 
+            // meanwhile ..
 
-
-
-
+        } else if ( irank == 0) {
             
+            if ( np/2 != pow(2, level)){
+
+                //al posto di creare ogni volta, si potrebbe usare sempre lo stesso e prendere da una parte all'altra
+                std::vector<struct kpoint<T>> left_points(mypoint.begin(), mypoint.begin() + half);
+                std::vector<struct kpoint<T>> right_points(mypoint.begin() + half + 1, mypoint.end());
+                //+1 so we can delet the splitting point
+
+                // to opt to save a pointer, instead
+                level = level + 1;
+                node->left = build_parallel_kdtree3( left_points, ndim, myaxis, np, level, comm);
+                
+                if( N != 2)
+                    node -> right = build_parallel_kdtree3( right_points, ndim, myaxis, np, level, comm);
+                else
+                    node -> right = new kdnode<T>;
+
+
+
+
+            }else{ //when it arrives at the good level
+
+                #ifdef DEBUG
+                    std::cout<<"\n Processor n "<<irank<<" BEFORE RECV ";
+                #endif
+                //recive from left (1)
+                int flag = 0, count;
+            
+                // while (!flag) { //wait the message from 1
+                    //MPI_Probe for dynamic reciving size of the message
+                    //It's also possible to send a second message with the size, 
+                    // but it's faster now
+                    // MPI_Iprobe(1, 0, comm, &flag, &status);
+                    MPI_Probe(1, 10, comm, &status);  // Probe for an incoming message from process 1
+                // }
+
+                // When probe returns, the status object has the size and other
+                // attributes of the incoming message. Get the message size
+                MPI_Get_count( &status, MPI_CHAR, &count); //or MPI_CHAR
+                // Allocate a buffer to hold the incoming numbers
+                char *buf1 = new char[count];
+                MPI_Recv(buf1, count, MPI_CHAR, MPI_ANY_SOURCE, 10, comm, &status);
+                // MPI_Wait( &request , MPI_STATUS_IGNORE);
+                std::string bla1(buf1, count);
+                delete [] buf1;
+                node -> left = deserialize_node<T>(bla1);
+
+
+                #ifdef DEBUG
+                    std::cout<<"\n string "<<bla1<<" \nAFTER 1 RECV ";
+                #endif
+
+
+                //recive from right (2)
+                flag = 0;
+            
+                // while (!flag) { //wait the message from 2
+                    // MPI_Iprobe(2, 0, comm, &flag, &status);
+                    MPI_Probe(2, 20, comm, &status);
+                // }
+
+                MPI_Get_count( &status, MPI_CHAR, &count); //or MPI_CHAR
+                char *buf2 = new char[count];
+                MPI_Recv(buf2, count, MPI_CHAR, MPI_ANY_SOURCE, 20, comm, &status);  // or MPI_STATUS_IGNORE
+                std::string bla2(buf2, count);
+                delete [] buf2;
+                node -> right = deserialize_node<T>(bla2);
+
+                //then recive the nodes done
+
+                #ifdef DEBUG
+                    std::cout<<"\n string "<<bla2<<" \nAFTER 2 RECV ";
+                #endif
+
+            }
+
+
+        }
+
+
+
+    }
+    // MPI_Barrier( comm );
+    
+    return node;
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////7
+
+
+
+
+// VERSION SENDING FROM 0 OR 1
+//good
+template<typename T>
+struct kdnode<T> * build_parallel_kdtree2(std::vector<struct kpoint<T>> points, int ndim, int axis, int np, int level, MPI_Comm comm){
+
+    //if np <=1 --> use serial kd_tree
+
+    //IT ONLY ACCEPT NP POWER OF 2
+
+    
+
+
+    int size, irank;
+    // MPI_Comm_size(comm, &size);
+    MPI_Comm_rank(comm, &irank);
+
+    MPI_Status status;
+    MPI_Request request;
+
+    struct kdnode<T>* node = new kdnode<T>; 
+    const int N = points.size();
+    int myaxis = (axis+1) % ndim;
+
+    if ( N == 1 ){
+
+        #ifdef DEBUG
+            // std::cout<<"\n Processor n: "<<irank<<", axis = "<<myaxis;
+        #endif
+
+        node->left = new kdnode<T>;
+        node->right = new kdnode<T>;
+        node->axis = myaxis;
+        node->split = points.at(0);
+
+    }else {
+        
+        // 
+
+        auto mypoint = choose_splitting_point( points, N, myaxis);
+        // the splitting point
+        int half = N/2;
+        node->axis = myaxis;
+        node->split = mypoint.at(half);
+        
+        
+        if ( irank == 1 || irank == 2){
+
+            //aspetta che arrivi il messaggio e da lì parte a fare l'albero
+            //fa l'albero
+            //manda a 0
+
+
+            if ( np/2 != pow(2, level)) {
+
+                //al posto di creare ogni volta, si potrebbe usare sempre lo stesso e prendere da una parte all'altra
+                std::vector<struct kpoint<T>> left_points(mypoint.begin(), mypoint.begin() + half);
+                std::vector<struct kpoint<T>> right_points(mypoint.begin() + half + 1, mypoint.end());
+                //+1 so we can delet the splitting point
+
+                // to opt to save a pointer, instead
+                level = level + 1;
+                node->left = build_parallel_kdtree2( left_points, ndim, myaxis, np, level, comm);
+                
+                if( N != 2)
+                    node -> right = build_parallel_kdtree2( right_points, ndim, myaxis, np, level, comm);
+                else
+                    node -> right = new kdnode<T>;
+
+
+
+            }else{
+
+                
+
+                if( irank == 1 ){
+
+                    //al posto di creare ogni volta, si potrebbe usare sempre lo stesso e prendere da una parte all'altra
+                    std::vector<struct kpoint<T>> left_points(mypoint.begin(), mypoint.begin() + half);
+                    
+                    #ifdef DEBUG
+                        std::cout<<"\tVector on 1: "<<left_points.size();
+                    #endif
+
+                        //return same level, so it will goes forever in the previous else
+                    node -> left = build_serial_kdtree(left_points, ndim, myaxis);
+
+                    std::string kdtree_str = serialize_node<T>(node -> left);
+                    // MPI_Isend( kdtree_str.c_str() , kdtree_str.length() , MPI_CHAR , 0 , 10 , comm, &request );
+                    MPI_Send( kdtree_str.c_str() , kdtree_str.length() , MPI_CHAR , 0 , 10 , comm );
+
+                }if( irank == 2 ){
+
+                    //al posto di creare ogni volta, si potrebbe usare sempre lo stesso e prendere da una parte all'altra
+                    std::vector<struct kpoint<T>> right_points(mypoint.begin() + half + 1, mypoint.end());
+                    
+                    #ifdef DEBUG
+                        std::cout<<"\tVector on 2: "<<right_points.size();
+                    #endif
+                    //return same level, so it will goes forever in the previous else
+                    if( N != 2)
+                        // node -> right = build_parallel_kdtree( right_points, ndim, myaxis, np, level, comm);
+                        node -> right = build_serial_kdtree(right_points, ndim, myaxis);
+                    else
+                        node -> right = new kdnode<T>;
+
+                    std::string kdtree_str = serialize_node<T>(node -> right);
+                    // MPI_Isend( kdtree_str.c_str() , kdtree_str.length() , MPI_CHAR , 0 , 20 , comm, &request );
+                    MPI_Send( kdtree_str.c_str() , kdtree_str.length() , MPI_CHAR , 0 , 20 , comm );             
+                }
+
+                // #ifdef DEBUG
+                //     std::cout<<"\n Processor n: "<<irank<<"BEFORE SEND";
+                // #endif
+
+                
+
+                #ifdef DEBUG
+                    std::cout<<"\n Processor n: "<<irank<<"AFTER SEND";
+                #endif
+
+            }
+
 
 
 
@@ -461,7 +941,7 @@ struct kdnode<T> * build_parallel_kdtree3(std::vector<struct kpoint<T>> points, 
                 MPI_Get_count( &status, MPI_CHAR, &count); //or MPI_CHAR
                 // Allocate a buffer to hold the incoming numbers
                 char *buf1 = new char[count];
-                MPI_Recv(buf1, count, MPI_CHAR, 1, 10, comm, &status);
+                MPI_Recv(buf1, count, MPI_CHAR, MPI_ANY_SOURCE, 10, comm, &status);
                 // MPI_Wait( &request , MPI_STATUS_IGNORE);
                 std::string bla1(buf1, count);
                 delete [] buf1;
@@ -483,7 +963,7 @@ struct kdnode<T> * build_parallel_kdtree3(std::vector<struct kpoint<T>> points, 
 
                 MPI_Get_count( &status, MPI_CHAR, &count); //or MPI_CHAR
                 char *buf2 = new char[count];
-                MPI_Recv(buf2, count, MPI_CHAR, 2, 20, comm, &status);  // or MPI_STATUS_IGNORE
+                MPI_Recv(buf2, count, MPI_CHAR, MPI_ANY_SOURCE, 20, comm, &status);  // or MPI_STATUS_IGNORE
                 std::string bla2(buf2, count);
                 delete [] buf2;
                 node -> right = deserialize_node<T>(bla2);
@@ -507,244 +987,4 @@ struct kdnode<T> * build_parallel_kdtree3(std::vector<struct kpoint<T>> points, 
     return node;
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-////////////////////////////////////////////////////////////////////////////////////////////7
-
-
-
-
-
-// template<typename T>
-// struct kdnode<T> * build_parallel_kdtree2(std::vector<struct kpoint<T>> points, int ndim, int axis, int np, int level, MPI_Comm comm){
-
-//     //if np <=1 --> use serial kd_tree
-
-//     //IT ONLY ACCEPT NP POWER OF 2
-
-    
-
-
-//     int size, irank;
-//     // MPI_Comm_size(comm, &size);
-//     MPI_Comm_rank(comm, &irank);
-
-//     MPI_Status status;
-//     MPI_Request request;
-
-//     struct kdnode<T>* node = new kdnode<T>; 
-//     const int N = points.size();
-//     int myaxis = (axis+1) % ndim;
-
-//     if ( N == 1 ){
-
-//         #ifdef DEBUG
-//             // std::cout<<"\n Processor n: "<<irank<<", axis = "<<myaxis;
-//         #endif
-
-//         node->left = new kdnode<T>;
-//         node->right = new kdnode<T>;
-//         node->axis = myaxis;
-//         node->split = points.at(0);
-
-//     }else {
-        
-//         // 
-
-//         auto mypoint = choose_splitting_point( points, N, myaxis);
-//         // the splitting point
-//         int half = N/2;
-//         node->axis = myaxis;
-//         node->split = mypoint.at(half);
-        
-        
-//         if ( irank == 1 || irank == 2){
-
-//             //aspetta che arrivi il messaggio e da lì parte a fare l'albero
-//             //fa l'albero
-//             //manda a 0
-
-
-//             if ( np/2 != pow(2, level)) {
-
-//                 //al posto di creare ogni volta, si potrebbe usare sempre lo stesso e prendere da una parte all'altra
-//                 std::vector<struct kpoint<T>> left_points(mypoint.begin(), mypoint.begin() + half);
-//                 std::vector<struct kpoint<T>> right_points(mypoint.begin() + half + 1, mypoint.end());
-//                 //+1 so we can delet the splitting point
-
-//                 // to opt to save a pointer, instead
-//                 level = level + 1;
-//                 node->left = build_parallel_kdtree2( left_points, ndim, myaxis, np, level, comm);
-                
-//                 if( N != 2)
-//                     node -> right = build_parallel_kdtree2( right_points, ndim, myaxis, np, level, comm);
-//                 else
-//                     node -> right = new kdnode<T>;
-
-
-
-//             }else{
-
-                
-
-//                 if( irank == 1 ){
-
-//                     //al posto di creare ogni volta, si potrebbe usare sempre lo stesso e prendere da una parte all'altra
-//                     std::vector<struct kpoint<T>> left_points(mypoint.begin(), mypoint.begin() + half);
-                    
-//                     #ifdef DEBUG
-//                         std::cout<<"\tVector on 1: "<<left_points.size();
-//                     #endif
-
-//                         //return same level, so it will goes forever in the previous else
-//                     node -> left = build_serial_kdtree(left_points, ndim, myaxis);
-
-//                     std::string kdtree_str = serialize_node<T>(node -> left);
-//                     // MPI_Isend( kdtree_str.c_str() , kdtree_str.length() , MPI_CHAR , 0 , 10 , comm, &request );
-//                     MPI_Send( kdtree_str.c_str() , kdtree_str.length() , MPI_CHAR , 0 , 10 , comm );
-
-//                 }if( irank == 2 ){
-
-//                     //al posto di creare ogni volta, si potrebbe usare sempre lo stesso e prendere da una parte all'altra
-//                     std::vector<struct kpoint<T>> right_points(mypoint.begin() + half + 1, mypoint.end());
-                    
-//                     #ifdef DEBUG
-//                         std::cout<<"\tVector on 2: "<<right_points.size();
-//                     #endif
-//                     //return same level, so it will goes forever in the previous else
-//                     if( N != 2)
-//                         // node -> right = build_parallel_kdtree( right_points, ndim, myaxis, np, level, comm);
-//                         node -> right = build_serial_kdtree(right_points, ndim, myaxis);
-//                     else
-//                         node -> right = new kdnode<T>;
-
-//                     std::string kdtree_str = serialize_node<T>(node -> right);
-//                     // MPI_Isend( kdtree_str.c_str() , kdtree_str.length() , MPI_CHAR , 0 , 20 , comm, &request );
-//                     MPI_Send( kdtree_str.c_str() , kdtree_str.length() , MPI_CHAR , 0 , 20 , comm );             
-//                 }
-
-//                 // #ifdef DEBUG
-//                 //     std::cout<<"\n Processor n: "<<irank<<"BEFORE SEND";
-//                 // #endif
-
-                
-
-//                 #ifdef DEBUG
-//                     std::cout<<"\n Processor n: "<<irank<<"AFTER SEND";
-//                 #endif
-
-//             }
-
-
-
-
-
-
-
-            
-
-
-
-//             // meanwhile ..
-
-//         } else if ( irank == 0) {
-            
-//             if ( np/2 != pow(2, level)){
-
-//                 //al posto di creare ogni volta, si potrebbe usare sempre lo stesso e prendere da una parte all'altra
-//                 std::vector<struct kpoint<T>> left_points(mypoint.begin(), mypoint.begin() + half);
-//                 std::vector<struct kpoint<T>> right_points(mypoint.begin() + half + 1, mypoint.end());
-//                 //+1 so we can delet the splitting point
-
-//                 // to opt to save a pointer, instead
-//                 level = level + 1;
-//                 node->left = build_parallel_kdtree2( left_points, ndim, myaxis, np, level, comm);
-                
-//                 if( N != 2)
-//                     node -> right = build_parallel_kdtree2( right_points, ndim, myaxis, np, level, comm);
-//                 else
-//                     node -> right = new kdnode<T>;
-
-
-
-
-//             }else{ //when it arrives at the good level
-
-//                 #ifdef DEBUG
-//                     std::cout<<"\n Processor n "<<irank<<" BEFORE RECV ";
-//                 #endif
-//                 //recive from left (1)
-//                 int flag = 0, count;
-            
-//                 // while (!flag) { //wait the message from 1
-//                     //MPI_Probe for dynamic reciving size of the message
-//                     //It's also possible to send a second message with the size, 
-//                     // but it's faster now
-//                     // MPI_Iprobe(1, 0, comm, &flag, &status);
-//                     MPI_Probe(1, 10, comm, &status);  // Probe for an incoming message from process 1
-//                 // }
-
-//                 // When probe returns, the status object has the size and other
-//                 // attributes of the incoming message. Get the message size
-//                 MPI_Get_count( &status, MPI_CHAR, &count); //or MPI_CHAR
-//                 // Allocate a buffer to hold the incoming numbers
-//                 char *buf1 = new char[count];
-//                 MPI_Recv(buf1, count, MPI_CHAR, 1, 10, comm, &status);
-//                 // MPI_Wait( &request , MPI_STATUS_IGNORE);
-//                 std::string bla1(buf1, count);
-//                 delete [] buf1;
-//                 node -> left = deserialize_node<T>(bla1);
-
-
-//                 #ifdef DEBUG
-//                     std::cout<<"\n string "<<bla1<<" \nAFTER 1 RECV ";
-//                 #endif
-
-
-//                 //recive from right (2)
-//                 flag = 0;
-            
-//                 // while (!flag) { //wait the message from 2
-//                     // MPI_Iprobe(2, 0, comm, &flag, &status);
-//                     MPI_Probe(2, 20, comm, &status);
-//                 // }
-
-//                 MPI_Get_count( &status, MPI_CHAR, &count); //or MPI_CHAR
-//                 char *buf2 = new char[count];
-//                 MPI_Recv(buf2, count, MPI_CHAR, 2, 20, comm, &status);  // or MPI_STATUS_IGNORE
-//                 std::string bla2(buf2, count);
-//                 delete [] buf2;
-//                 node -> right = deserialize_node<T>(bla2);
-
-//                 //then recive the nodes done
-
-//                 #ifdef DEBUG
-//                     std::cout<<"\n string "<<bla2<<" \nAFTER 2 RECV ";
-//                 #endif
-
-//             }
-
-
-//         }
-
-
-
-//     }
-//     // MPI_Barrier( comm );
-    
-//     return node;
-
-// }
 

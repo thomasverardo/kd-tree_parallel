@@ -51,7 +51,13 @@ template<typename T>
 struct kdnode<T> * build_serial_kdtree( std::vector<struct kpoint<T>> points, int ndim, int axis );
 
 template<typename T>
-struct kdnode<T> * build_parallel_kdtree(std::vector<struct kpoint<T>> points, int ndim, int axis, int np, int level, MPI_Comm comm);
+struct kdnode<T> * build_parallel_kdtree3(std::vector<struct kpoint<T>> points, int ndim, int axis, int np, int level, MPI_Comm comm);
+
+template<typename T>
+struct kdnode<T> * build_parallel_kdtree2(std::vector<struct kpoint<T>> points, int ndim, int axis, int np, int level, MPI_Comm comm);
+
+template<typename T>
+struct kdnode<T> * build_parallel_kdtree4(std::vector<struct kpoint<T>> points, int ndim, int axis, int np, int level, MPI_Comm comm, int which);
 
 
 #endif

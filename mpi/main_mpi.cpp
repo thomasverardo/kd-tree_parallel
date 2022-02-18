@@ -39,9 +39,9 @@ int main(int argc, char **argv){
     MPI_Comm_rank( MPI_COMM_WORLD, &irank );
 
             
+//1000000
 
-
-    int ndim = N_DIM, n=1000000;
+    int ndim = N_DIM, n=1048577;
     int start_axis = 1;
 
     auto points = generatePoints<int>(ndim, n);
@@ -62,24 +62,29 @@ int main(int argc, char **argv){
         }
     #endif
         
+    
 
     start = std::chrono::high_resolution_clock::now();
     // mpi_start = MPI_Wtime();
 
     
 
-    kdtree = build_parallel_kdtree3<int>(points, ndim, start_axis, size, 0, MPI_COMM_WORLD, 1);
+    // kdtree = build_parallel_kdtree2<int>(points, ndim, start_axis, size, 0, MPI_COMM_WORLD);
+    kdtree = build_parallel_kdtree4<int>(points, ndim, start_axis, size, 0, MPI_COMM_WORLD, 1);
 
     end = std::chrono::high_resolution_clock::now();
     // mpi_end = MPI_Wtime();
 
     
+    if( irank == 0){
+        std::chrono::duration<double> diff = end - start;
+        // double total_mpi = mpi_end - mpi_start;
 
-    std::chrono::duration<double> diff = end - start;
-    // double total_mpi = mpi_end - mpi_start;
+        std::cout<<"\nTime to buld the tree with rank "<<irank<<": "<<diff.count() <<" s\n";
+        // std::cout<<"\nMPI time: "<<total_mpi<<std::endl;
+    }
 
-    std::cout<<"\nTime to buld the tree with rank "<<irank<<": "<<diff.count() <<" s\n";
-    // std::cout<<"\nMPI time: "<<total_mpi<<std::endl;
+    
 
     // kdtree -> pre_order();
 
