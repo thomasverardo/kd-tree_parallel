@@ -185,7 +185,7 @@ struct kdnode<T> * build_serial_kdtree( std::vector<struct kpoint<T>> points, in
     
 }
 
-// https://stackoverflow.com/questions/36021305/mpi-send-struct-with-a-vector-property-in-c
+
 template<typename T>
 std::string serialize_node(struct kdnode<T> *kdtree){
 

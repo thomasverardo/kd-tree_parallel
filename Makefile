@@ -14,13 +14,13 @@ ompi_debug:
 	mpic++ mpi/main_mpi.cpp mpi/kd_tree_mpi.cpp -o main_mpi.x -DDEBUG -g
 
 run_ompi: 
-	mpirun -np $(np) ./main_mpi.x 
+	mpirun -np $(np) ./main_mpi.x 1000000
 
 run_ompi2: 
-	mpirun -np 4 ./main_mpi.x 
+	mpirun -np 5 ./main_mpi.x 1000000
 
 val_ompi2:
-	mpirun -np 4 valgrind -s ./main_mpi.x
+	mpirun -np 4 valgrind -s ./main_mpi.x 1000000
 
 clean:
 	rm *.x
