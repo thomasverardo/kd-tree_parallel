@@ -1,11 +1,11 @@
 all:
-	g++ -g Serial/main.cpp Serial/kd_tree.cpp -o main.x -std=c++11
+	mpic++ Serial/main.cpp Serial/kd_tree.cpp -o main.x -std=c++11
 	
 mp: 
-	g++ -fopenmp -g Openmp/main_mp.cpp Openmp/kd_tree_mp.cpp -o main_mp.x
+	mpic++ -fopenmp Openmp/main_mp.cpp Openmp/kd_tree_mp.cpp -o main_mp.x
 
 mp_debug:
-	g++ -fopenmp -g Openmp/main_mp.cpp Openmp/kd_tree_mp.cpp -o main_mp.x -DDEBUG
+	mpic++ -fopenmp -g Openmp/main_mp.cpp Openmp/kd_tree_mp.cpp -o main_mp.x -DDEBUG
 
 ompi: 
 	mpic++ mpi/main_mpi.cpp mpi/kd_tree_mpi.cpp -o main_mpi.x

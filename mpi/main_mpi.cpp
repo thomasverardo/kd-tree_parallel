@@ -29,6 +29,10 @@ std::vector<struct kpoint<T>> generatePoints(const int ndim, const int npoints){
 
 int main(int argc, char **argv){
 
+    std::string arg = argv[1];
+    std::size_t pos;
+    int n = std::stoi(arg, &pos);
+
     int irank, size;
     MPI_Comm comm; 
     
@@ -38,10 +42,9 @@ int main(int argc, char **argv){
     MPI_Comm_size( MPI_COMM_WORLD, &size );
     MPI_Comm_rank( MPI_COMM_WORLD, &irank );
 
-            
-//1000000
+        
 
-    int ndim = N_DIM, n=1000000;
+    int ndim = N_DIM; //n=100000000;
     int start_axis = 1;
 
     auto points = generatePoints<int>(ndim, n);

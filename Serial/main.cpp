@@ -27,9 +27,11 @@ std::vector<struct kpoint<T>> generatePoints(const int ndim, const int npoints){
     return points;
 }
 
-int main(){
-//1000000
-    int ndim = N_DIM, n=1000000;
+int main(int argc, char **argv){
+
+    int n = std::stoi(argv[1]);
+
+    int ndim = N_DIM;
 
     auto points = generatePoints<int>(ndim, n);
 
@@ -46,7 +48,7 @@ int main(){
     std::chrono::duration<double> diff = end - start;
 
     // std::cout<<"\nTime to buld the tree in serial: "<<diff.count() <<" s\n";
-    std::cout<<diff.count();
+    std::cout<<diff.count()<<std::endl;
 
     return 0;
 }
