@@ -41,7 +41,6 @@ int main(){
     {
         #pragma omp single
         {
-            std::cout<<"Start thread "<<omp_get_thread_num()<<std::endl;
 
             start = std::chrono::high_resolution_clock::now();
             kdtree = build_kdtree<int>(points, ndim, 1);

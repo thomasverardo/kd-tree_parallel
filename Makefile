@@ -1,5 +1,5 @@
 all:
-	g++ -g Serial/main.cpp Serial/kd_tree.cpp -o main.x
+	g++ -g Serial/main.cpp Serial/kd_tree.cpp -o main.x -std=c++11
 	
 mp: 
 	g++ -fopenmp -g Openmp/main_mp.cpp Openmp/kd_tree_mp.cpp -o main_mp.x

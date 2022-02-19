@@ -41,7 +41,7 @@ int main(int argc, char **argv){
             
 //1000000
 
-    int ndim = N_DIM, n=15;
+    int ndim = N_DIM, n=1000000;
     int start_axis = 1;
 
     auto points = generatePoints<int>(ndim, n);
