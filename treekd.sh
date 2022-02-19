@@ -20,3 +20,7 @@ make ompi
 ./main.x
 ./main_mp.x
 make run_ompi np=4
+
+
+
+#
