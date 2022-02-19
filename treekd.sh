@@ -4,6 +4,7 @@
 #PBS -l nodes=1:ppn=24
 #PBS -l walltime=00:30:00
 
+
 # cd /u/dssc/tomve/Ass2
 cd $PBS_O_WORKDIR
 rm treekd.sh.*
