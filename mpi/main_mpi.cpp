@@ -82,7 +82,7 @@ int main(int argc, char **argv){
         // double total_mpi = mpi_end - mpi_start;
 
         // std::cout<<"\nTime to buld the tree with rank "<<irank<<": "<<diff.count() <<" s\n";
-        std::cout<<diff.count();
+        std::cout<<diff.count()<<std::endl;
         // std::cout<<"\nMPI time: "<<total_mpi<<std::endl;
     }
 
