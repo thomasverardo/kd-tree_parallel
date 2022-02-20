@@ -17,7 +17,7 @@ run_ompi:
 	mpirun -np $(np) ./main_mpi.x 1000000
 
 run_ompi2: 
-	mpirun -np 5 ./main_mpi.x 1000000
+	mpirun -np 5 ./main_mpi.x 10000000
 
 val_ompi2:
 	mpirun -np 4 valgrind -s ./main_mpi.x 1000000

@@ -68,7 +68,6 @@ int main(int argc, char **argv){
     
 
     start = std::chrono::high_resolution_clock::now();
-    // mpi_start = MPI_Wtime();
 
     
 
@@ -77,35 +76,31 @@ int main(int argc, char **argv){
     kdtree = build_parallel_kdtree4<int>(points, ndim, start_axis, size, 0, MPI_COMM_WORLD, 1);
 
     end = std::chrono::high_resolution_clock::now();
-    // mpi_end = MPI_Wtime();
 
     
     if( irank == 0){
         std::chrono::duration<double> diff = end - start;
-        // double total_mpi = mpi_end - mpi_start;
 
         // std::cout<<"\nTime to buld the tree with rank "<<irank<<": "<<diff.count() <<" s\n";
         std::cout<<diff.count()<<std::endl;
-        // std::cout<<"\nMPI time: "<<total_mpi<<std::endl;
     }
-
+    
     
 
-    // kdtree -> pre_order();
+    //calcolate the serialization time and see how influence the total time
+    // if( irank == 0){
 
+    //     start = std::chrono::high_resolution_clock::now();
+    //     std::string kdtree_ser = serialize_node(kdtree);
 
-    // mpi_start = MPI_Wtime();
-    // // start = std::chrono::high_resolution_clock::now();
-    // std::string kdtree_ser = serialize_node(kdtree);
+    //     // std::cout<<std::endl<<std::endl<<kdtree_ser<<std::endl<<std::endl;
 
-    // // std::cout<<std::endl<<std::endl<<kdtree_ser<<std::endl<<std::endl;
+    //     auto kdtree_des = deserialize_node<int>(kdtree_ser);
+    //     end = std::chrono::high_resolution_clock::now();
 
-    // auto aaaa = deserialize_node<int>(kdtree_ser);
-    // // end = std::chrono::high_resolution_clock::now();
-    // mpi_end = MPI_Wtime();
-
-    // double total_mpi = mpi_end - mpi_start;
-    // std::cout<<"\nTime serialize/deserialize the tree: "<<total_mpi <<" s";
+    //     std::chrono::duration<double> diff = end - start;
+    //     std::cout<<diff.count()<<std::endl;
+    // }
 
     // if(irank == 0)
         // kdtree -> pre_order();
@@ -117,7 +112,7 @@ int main(int argc, char **argv){
         }
     #endif
     
-
+    
 
     
     MPI_Finalize();

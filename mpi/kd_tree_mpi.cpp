@@ -5,6 +5,7 @@
 #include <math.h>
 #include <string>
 #include <sstream>
+#include <chrono>
 // #include <mpi.h>
 
 #define N_DIM 2
@@ -185,7 +186,7 @@ struct kdnode<T> * build_serial_kdtree( std::vector<struct kpoint<T>> points, in
     
 }
 
-
+// https://stackoverflow.com/questions/36021305/mpi-send-struct-with-a-vector-property-in-c
 template<typename T>
 std::string serialize_node(struct kdnode<T> *kdtree){
 
@@ -295,9 +296,12 @@ struct kdnode<T> * deserialize_node(std::string data){
 template<typename T>
 struct kdnode<T> * build_parallel_kdtree4(std::vector<struct kpoint<T>> points, int ndim, int axis, int np, int level, MPI_Comm comm, int which){
 
-    //IT ONLY ACCEPT NP POWER OF 2
+    //IT ONLY ACCEPT NP == POWER OF 2 or POWER OF 2 + 1
 
     
+    // std::chrono::time_point<std::chrono::high_resolution_clock> start;
+    // std::chrono::time_point<std::chrono::high_resolution_clock> end;
+    // std::chrono::duration<double> diff;
 
 
     int size, irank;
@@ -376,7 +380,12 @@ struct kdnode<T> * build_parallel_kdtree4(std::vector<struct kpoint<T>> points, 
                         //return same level, so it will goes forever in the previous else
                     node -> left = build_serial_kdtree(left_points, ndim, myaxis);
 
+                    // start = std::chrono::high_resolution_clock::now();
                     std::string kdtree_str = serialize_node<T>(node -> left);
+                    // end = std::chrono::high_resolution_clock::now();
+                    // diff = end - start;
+                    // std::cout<<"ser:"<<diff.count()<<std::endl;
+
                     // MPI_Isend( kdtree_str.c_str() , kdtree_str.length() , MPI_CHAR , 0 , 10 , comm, &request );
                     MPI_Send( kdtree_str.c_str() , kdtree_str.length() , MPI_CHAR , 0 , 10 , comm );
                     
@@ -408,7 +417,12 @@ struct kdnode<T> * build_parallel_kdtree4(std::vector<struct kpoint<T>> points, 
                 else
                     node -> right = new kdnode<T>;
 
+                // start = std::chrono::high_resolution_clock::now();
                 std::string kdtree_str = serialize_node<T>(node -> right);
+                // end = std::chrono::high_resolution_clock::now();
+                // diff = end - start;
+                // std::cout<<"ser:"<<diff.count()<<std::endl;
+                
                 // MPI_Isend( kdtree_str.c_str() , kdtree_str.length() , MPI_CHAR , 0 , 20 , comm, &request );
                 MPI_Send( kdtree_str.c_str() , kdtree_str.length() , MPI_CHAR , 0 , 20 , comm );             
                 
@@ -470,7 +484,14 @@ struct kdnode<T> * build_parallel_kdtree4(std::vector<struct kpoint<T>> points, 
                 // MPI_Wait( &request , MPI_STATUS_IGNORE);
                 std::string bla1(buf1, count);
                 delete [] buf1;
+
+                //calculate time
+                // start = std::chrono::high_resolution_clock::now();
                 node -> left = deserialize_node<T>(bla1);
+                // end = std::chrono::high_resolution_clock::now();
+                // diff = end - start;
+                // std::cout<<"des:"<<diff.count()<<std::endl;
+                
 
 
                 #ifdef DEBUG
@@ -496,7 +517,12 @@ struct kdnode<T> * build_parallel_kdtree4(std::vector<struct kpoint<T>> points, 
                 MPI_Recv(buf2, count, MPI_CHAR, which, 20, comm, &status);  
                 std::string bla2(buf2, count);
                 delete [] buf2;
+
+                // start = std::chrono::high_resolution_clock::now();
                 node -> right = deserialize_node<T>(bla2);
+                // end = std::chrono::high_resolution_clock::now();
+                // diff = end - start;
+                // std::cout<<"des:"<<diff.count()<<std::endl;
 
                 //then recive the nodes done
 
