@@ -62,52 +62,52 @@ The main problem of this implemented code with Open MPI is that each sub-tree ha
 # Performance model and scaling
 
 In this section it will presented the real performance of the function responsible for the construction of the tree in serial and in parallel. Theoretically specking, the performance of the parallel code must be better than the serial, because the work is spitted among the processes/thread.
+To evaluated the performance of the implemented code, the test was done with $10^8$ data points, each composed to 2 dimension. 
+All the compilation are made with an optimization flags (-O3) because, without any optimization option, the compiler’s goal is to reduce the cost of compilation and to make debugging produce the expected results. Turning on optimization flags makes the compiler attempt to improve the performance and/or code size at the expense of compilation time.
+Furthermore, the OpenMP part is compiled with some environment variables that are used to maximise the performance. Those are: 
 
-```{r}
+* *OMP_PROC_BIND=true* that prevents threads migrating between cores
+* *OMP_WAIT_POLICY=active* that encourages idle threads to spin rather than sleep
+* *OMP_DYNAMIC=false* that doesn't let the runtime deliver fewer threads than those expected
+* *OMP_PLACES=cores*, that set the places to corresponds to the cores.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 #preprocessing
 proc <- data.frame(c(1,2,4,8,16,24))
+proc_all <- data.frame(seq(1,24))
 colnames(proc) <- "Process"
+colnames(proc_all) <- "Process"
 
 serial <- read.table("../output/serial.out", header = FALSE, col.names = c("Serial"))
 mp <- read.table("../output/mp.out", header = FALSE, col.names = c("mp"))
+mp_all <- read.table("../output/mp_1_24.out", header = FALSE, col.names = c("mp_all"))
 
 strong <- data.frame(proc, serial, mp)
+strong_all <- data.frame(proc_all, mp_all)
 ```
 
-```{r}
+## Strong scalability
+
+The strong scalability explain the performance of the parallel algorithm  with the number of processors that increase while the problem size remains constant. The individual workload must be kept high enough to keep all processors fully occupied. The speedup achieved by increasing the number of processes usually decreases more or less continuously.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 #Plot
-# ggplot(data = strong)+
-#     xlab("N of process") +
-#     ylab("Time (s)") +
-#     # scale_y_continuous(breaks = seq(0,9500,by=1000))+
-#     # scale_y_continuous(trans="log2")+
-#     geom_line(mapping = aes(Process, Serial, col = "Serial")) +
-#     geom_point(mapping = aes(Process, Serial, col = "Serial")) +
-#     geom_line(mapping = aes(Process, mp, col = "MP")) +
-#     geom_point(mapping = aes(Process, mp, col = "MP")) 
-#     # geom_smooth(mapping = aes(process, Serial))
-
-
-```
-
-
-
-```{r}
-#Plot
+proc_less <- data.frame(c(1,2,4,8,16))
 
 mpi <- read.csv("../output/serialize.csv", header = F, col.names = c("ser_des", "mpi"))
 mpi["no_ser_des"] <- mpi["mpi"] - mpi["ser_des"]
-mpi["Process"] <- proc
+mpi["Process"] <- proc_less
 
 plot1 <- merge(strong, mpi, by="Process")
 
 ggplot(data = plot1)+
-    xlab("N of process") +
+    xlab("N of process (log)") +
     ylab("Time (s)") +
     theme_bw() + 
-    scale_colour_brewer(type = "seq", palette = "Spectral") +
-    scale_y_continuous(breaks = seq(0,650,by=100))+
-    # scale_y_continuous(trans="log2")+
+    scale_colour_brewer(type = "seq", palette = "Set1") +
+    scale_y_continuous(breaks = seq(0,650,by=20))+
+    scale_x_continuous(trans="log2")+
     geom_line(mapping = aes(Process, Serial, col = "Serial")) +
     geom_point(mapping = aes(Process, Serial, col = "Serial")) +
     geom_line(mapping = aes(Process, mpi, col = "Open MPI")) +
@@ -121,15 +121,18 @@ ggplot(data = plot1)+
 
 ```
 
-```{r}
+It's possible to see in this graph above that, while OpenMP can paralyzes well, with a execution time close to the half of the serial time, Open MPI can't do a very good job. This is caused by the serialized/deserialized part. Indeed, each processes, after they built their sub-tree, they have to send to the master process, so as to merge all sub-tree together. But, before the message is sent, the sub-tree has to be serialized in a *std::String*. To serialize the sub-tree, the algorithm have to print on a string all levels of that tree. Than, the process with rank 0 has to first receive the message with the serialized tree, deserialize the string and at last, combine with others trees. 
+
+
+```{r echo=FALSE}
 
 ggplot(data = plot1)+
-    xlab("N of process") +
+    xlab("N of process (log)") +
     ylab("Time (s)") +
     theme_bw() + 
-    scale_colour_brewer(type = "seq", palette = "Spectral") +
-    scale_y_continuous(breaks = seq(0,650,by=100))+
-    # scale_y_continuous(trans="log2")+
+    scale_colour_brewer(type = "seq", palette = "Set1") +
+    scale_y_continuous(breaks = seq(0,650,by=20))+
+    scale_x_continuous(trans="log2")+
     geom_line(mapping = aes(Process, Serial, col = "Serial")) +
     geom_point(mapping = aes(Process, Serial, col = "Serial")) +
     geom_line(mapping = aes(Process, mpi, col = "Open MPI")) +
@@ -138,6 +141,53 @@ ggplot(data = plot1)+
     geom_point(mapping = aes(Process, mp, col = "OpenMP")) +
     geom_line(mapping = aes(Process, no_ser_des, col = "Open MPI\nwithout deserializing")) +
     geom_point(mapping = aes(Process, no_ser_des, col = "Open MPI\nwithout deserializing")) 
+
+```
+
+After doing some tests, the time to serialized a tree is $s/np$, where $np$ is the number of processes used and $s$ is a constant, that is the average time to serialize the tree **with one process**, and is equal to $104 s$ ca. For example, when we use 4 processes, we have the average time to serialize equal to $26 s$ ca for each process. But the real problem is to transform the string in a tree; to make this possible, the algorithm have to iterate some loops and this will decrease the total performance. Exactly, the average time in seconds to deserialize is $d/np$, where $np$ is the number of processes and $d$ is a constant equal to $265 s$ ca. 
+To see how much the deserialization affects to the total performance of the Open MPI implementation, it has been done this chart above, where it's possible to see that the performance improves by the constant $d$, that is $265 s$ ca. 
+Furthermore, the algorithm of the Open MPI part does a great job when it has to paralyzes the algorithm, because the execution time dicrease from $400s$ with one process to less than $100s$ with eight processes. 
+
+```{r echo=FALSE}
+ggplot(data = strong_all)+
+    xlab("N of process") +
+    ylab("Time (s)") +
+    theme_bw() + 
+    scale_colour_brewer(type = "seq", palette = "Set1") +
+    # scale_y_continuous(breaks = seq(0,650,by=100))+
+    # scale_x_continuous(trans="log2")+
+    geom_line(mapping = aes(Process, mp_all, col = "OpenMP")) +
+    geom_point(mapping = aes(Process, mp_all, col = "OpenMP")) 
+```
+
+
+Summing up, we can see that OpenMP has best performance of Open MPI, but if the serialization/deserialization part is done differently, the Open MPI algorithm has greater room for growth. 
+
+## Weak scalability
+
+
+
+```{r echo=FALSE}
+proc_less <- data.frame(c(1,2,4,8,16))
+
+mpi_weak <- read.table("../output/ompi_weak.out", header = FALSE, col.names = c("ompi_weak"))
+mpi_weak["Process"] <- proc_less
+mp_weak <- read.table("../output/mp_weak.out", header = FALSE, col.names = c("mp_weak"))
+mp_weak["Process"] <- proc
+
+weak <- merge(mpi_weak,mp_weak, bu="Process")
+
+ggplot(data = weak)+
+    xlab("N of process (log)") +
+    ylab("Time (s)") +
+    theme_bw() + 
+    scale_colour_brewer(type = "seq", palette = "Set1") +
+    # scale_y_continuous(breaks = seq(0,650,by=100))+
+    scale_x_continuous(trans="log2")+
+    geom_line(mapping = aes(Process, ompi_weak, col = "Open MPI")) +
+    geom_point(mapping = aes(Process, ompi_weak, col = "Open MPI")) +
+    geom_line(mapping = aes(Process, mp_weak, col = "OpenMP")) +
+    geom_point(mapping = aes(Process, mp_weak, col = "OpenMP")) 
 
 ```
 
@@ -158,3 +208,7 @@ Basically, according to this law you will have approximately the same performanc
 Al posto di creare un vettore ogni volta, aggiungere come nel quick sort, un inizio e una fine
 
 Migliorare la serializzazione e soprattutto la deserializzazione. Oppure mandare altro
+
+
+# Bibliografia
+https://www.archer.ac.uk/training/course-material/2017/08/openmp-ox/Slides/L09-TipsTricksGotchas.pdf
