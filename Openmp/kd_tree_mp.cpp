@@ -152,7 +152,7 @@ struct kdnode<T> * build_kdtree( std::vector<struct kpoint<T>> points, int ndim,
         }
     }
 
-    #pragma omp taskwait
+    // #pragma omp taskwait
 
     return node;
     

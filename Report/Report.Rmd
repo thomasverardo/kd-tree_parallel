@@ -7,6 +7,7 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 library(ggplot2)
+require(gridExtra)
 ```
 
 # Introduction
@@ -15,7 +16,9 @@ In this report, there is written how a KD-Tree is implemanted and how it can be 
 
 
 
-In the serial part, the algorithm is costructed as a "normal" program, without keeping in consideration how the processor will works. In the parallel part, it will be consider how the processor can distribuite the amout of work among processes or threads. To implement this part, it was used two library for parallel programming, that are **OpenMP** and **Open MPI**. 
+In the serial part, the algorithm is constructed as a "normal" program, without keeping in consideration how the processor will works. In the parallel part, it will be consider how the processor can distribuite the amout of work among processes or threads. To implement this part, it was used two library for parallel programming, that are **OpenMP** and **Open MPI**. 
+
+It's important to make a premise. In the following report, where there is written "process", it means either MPI process or OpenMP threads. This was done to avoid confusion in the performance paragraph. 
 
 # Algorithm
 A KD-Tree is a data structure presented originally by Friedman, Bentley and Finkel in 1977 to represent a set of k-dimensional data in order to make them efficiently searchable. A KD-Tree is a tree whose basic concept is to compare against 1 dimension at a time per level cycling
@@ -37,7 +40,8 @@ These are the abstract steps to bulid the KD-Tree:
 
 
 # Implementation
-The KD-Tree implementation was made with C++11 and is written to work with the number of k-dimension > 0 (*N_DIM > 0*). The implemented algorithm doesn't use a sorting algorithm, but it uses the function provided by the standard library "*std::nth_element()*". This function is a partial sorting algorithm that rearranges elements in *[first, last)* such that:
+The KD-Tree implementation was made with C++11 and is written to work with the number of k-dimension > 0 (*N_DIM > 0*). The code is generic programming algorithm, because it's written with C++ templates. 
+The implemented algorithm doesn't use a sorting algorithm, but it uses the function provided by the standard library "*std::nth_element()*". This function is a partial sorting algorithm that rearranges elements in *[first, last)* such that:
 
 * The element pointed at by *nth* (the median) is changed to whatever element would occur in that position if *[first, last)* were sorted
 * All of the elements before this new *nth* element (the median) are less than or equal to the elements after the new *nth* element.
@@ -59,7 +63,7 @@ The main problem of this implemented code with Open MPI is that each sub-tree ha
 
 <!-- In this way, no process have to do two different times in a different node a sub-tree, expect for the process with rank 1. In fact, if the number of process is a power of 2 and since the process 0 doesn't build a sub-tree, this process is in charge to build, for the same level, the node that is further to the left (the first node) and the node that is further to the right (the last node). It was chosen this process because it's the first to finish and  -->
 
-# Performance model and scaling
+# Performance scaling and discussion
 
 In this section it will presented the real performance of the function responsible for the construction of the tree in serial and in parallel. Theoretically specking, the performance of the parallel code must be better than the serial, because the work is spitted among the processes/thread.
 To evaluated the performance of the implemented code, the test was done with $10^8$ data points, each composed to 2 dimension. 
@@ -91,7 +95,7 @@ strong_all <- data.frame(proc_all, mp_all)
 
 The strong scalability explain the performance of the parallel algorithm  with the number of processors that increase while the problem size remains constant. The individual workload must be kept high enough to keep all processors fully occupied. The speedup achieved by increasing the number of processes usually decreases more or less continuously.
 
-```{r echo=FALSE, message=FALSE, warning=FALSE}
+```{r echo=FALSE, message=FALSE, warning=FALSE,fig.height=4}
 #Plot
 proc_less <- data.frame(c(1,2,4,8,16))
 
@@ -124,7 +128,7 @@ ggplot(data = plot1)+
 It's possible to see in this graph above that, while OpenMP can paralyzes well, with a execution time close to the half of the serial time, Open MPI can't do a very good job. This is caused by the serialized/deserialized part. Indeed, each processes, after they built their sub-tree, they have to send to the master process, so as to merge all sub-tree together. But, before the message is sent, the sub-tree has to be serialized in a *std::String*. To serialize the sub-tree, the algorithm have to print on a string all levels of that tree. Than, the process with rank 0 has to first receive the message with the serialized tree, deserialize the string and at last, combine with others trees. 
 
 
-```{r echo=FALSE}
+```{r echo=FALSE,fig.height=3}
 
 ggplot(data = plot1)+
     xlab("N of process (log)") +
@@ -139,17 +143,23 @@ ggplot(data = plot1)+
     geom_point(mapping = aes(Process, mpi, col = "Open MPI")) +
     geom_line(mapping = aes(Process, mp, col = "OpenMP")) +
     geom_point(mapping = aes(Process, mp, col = "OpenMP")) +
-    geom_line(mapping = aes(Process, no_ser_des, col = "Open MPI\nwithout deserializing")) +
-    geom_point(mapping = aes(Process, no_ser_des, col = "Open MPI\nwithout deserializing")) 
+    geom_line(mapping = aes(Process, no_ser_des, col = "Open MPI\nwithout deserialization")) +
+    geom_point(mapping = aes(Process, no_ser_des, col = "Open MPI\nwithout deserialization")) 
 
 ```
 
-After doing some tests, the time to serialized a tree is $s/np$, where $np$ is the number of processes used and $s$ is a constant, that is the average time to serialize the tree **with one process**, and is equal to $104 s$ ca. For example, when we use 4 processes, we have the average time to serialize equal to $26 s$ ca for each process. But the real problem is to transform the string in a tree; to make this possible, the algorithm have to iterate some loops and this will decrease the total performance. Exactly, the average time in seconds to deserialize is $d/np$, where $np$ is the number of processes and $d$ is a constant equal to $265 s$ ca. 
+After doing some tests, the time to serialized a tree is $s/np$, where $np$ is the number of processes used and $s$ is a constant, that is the average time to serialize the tree **with one process**, and is equal to $72 s$ ca. For example, when we use 4 processes, we have the average time to serialize equal to $26 s$ ca for each process. But the real problem is to transform the string in a tree; to make this possible, the algorithm have to iterate some loops and this will decrease the total performance. Exactly, the average time in seconds to deserialize is $d/np$, where $np$ is the number of processes and $d$ is a constant equal to $108 s$ ca. 
 To see how much the deserialization affects to the total performance of the Open MPI implementation, it has been done this chart above, where it's possible to see that the performance improves by the constant $d$, that is $265 s$ ca. 
 Furthermore, the algorithm of the Open MPI part does a great job when it has to paralyzes the algorithm, because the execution time dicrease from $400s$ with one process to less than $100s$ with eight processes. 
 
-```{r echo=FALSE}
-ggplot(data = strong_all)+
+
+
+
+```{r echo=FALSE ,fig.height=3}
+#, fig.width=7,fig.height=3
+strong_all["mp_speedup"] <- strong_all[1,2]/strong_all["mp_all"]
+
+gg1 <- ggplot(data = strong_all)+
     xlab("N of process") +
     ylab("Time (s)") +
     theme_bw() + 
@@ -157,17 +167,38 @@ ggplot(data = strong_all)+
     # scale_y_continuous(breaks = seq(0,650,by=100))+
     # scale_x_continuous(trans="log2")+
     geom_line(mapping = aes(Process, mp_all, col = "OpenMP")) +
-    geom_point(mapping = aes(Process, mp_all, col = "OpenMP")) 
+    geom_point(mapping = aes(Process, mp_all, col = "OpenMP")) +
+    
+    theme(legend.position = "top")
+
+gg2 <- ggplot(data = strong_all)+
+    xlab("N of process") +
+    ylab("T(1)/T(N)") +
+    theme_bw() + 
+    scale_colour_brewer(type = "seq", palette = "Set1") +
+    # scale_y_continuous(breaks = seq(0,650,by=20))+
+    # scale_x_continuous(trans="log2")+
+    geom_line(mapping = aes(Process, mp_speedup, col = "Open MP")) +
+    geom_point(mapping = aes(Process, mp_speedup, col = "Open MP")) +
+    
+    theme(legend.position = "top")
+
+grid.arrange(gg1, gg2, ncol=2)
 ```
+
+To looks better the performance of the OpenMP, the following graph was made (above). In the plot to the left it's possible to see how much time does it takes to build the KD-Tree with two dimension. Notice that, after some processes used in parallel, the algorithm cannot decrease the time to build the tree. 
+In the left, there is the plot that describe the "parallel speedup". The speedup gained from applying N CPUs, Speedup(N), is the ratio of the one-CPU execution time to the N-CPU parallel execution time: $Speedup(N) = T(1)/T(N)$. Intuitively, this ratio should be equal to the number of CPUs, but this never be achieved. This happens because some parts of a program can't be executed in parallel. This phenomenon is describes by the Amdahl's Law, that is: $$S(N) = \frac{1}{(1-P)+(P/N)} $$
+
+Where $S(N)$ is the maximum speedup that can be achieved using N processes, $P$ is the proportion of the program that can be made parallel and $1-P$ is the proportion that remains serial.
 
 
 Summing up, we can see that OpenMP has best performance of Open MPI, but if the serialization/deserialization part is done differently, the Open MPI algorithm has greater room for growth. 
 
 ## Weak scalability
 
+In case of weak scalability, both the number of processes and the problem size are increased. Weak scaling is mostly used for large memory-bound applications where the required memory cannot be satisfied by a single node. 
 
-
-```{r echo=FALSE}
+```{r echo=FALSE,fig.height=3}
 proc_less <- data.frame(c(1,2,4,8,16))
 
 mpi_weak <- read.table("../output/ompi_weak.out", header = FALSE, col.names = c("ompi_weak"))
@@ -177,38 +208,54 @@ mp_weak["Process"] <- proc
 
 weak <- merge(mpi_weak,mp_weak, bu="Process")
 
-ggplot(data = weak)+
+weak["ompi_speedup"] <- weak[1,2]/weak["ompi_weak"]
+weak["mp_speedup"] <- weak[1,3]/weak["mp_weak"]
+
+ggw1 <- ggplot(data = weak)+
     xlab("N of process (log)") +
     ylab("Time (s)") +
     theme_bw() + 
     scale_colour_brewer(type = "seq", palette = "Set1") +
     # scale_y_continuous(breaks = seq(0,650,by=100))+
-    scale_x_continuous(trans="log2")+
+    # scale_x_continuous(trans="log2")+
     geom_line(mapping = aes(Process, ompi_weak, col = "Open MPI")) +
     geom_point(mapping = aes(Process, ompi_weak, col = "Open MPI")) +
     geom_line(mapping = aes(Process, mp_weak, col = "OpenMP")) +
-    geom_point(mapping = aes(Process, mp_weak, col = "OpenMP")) 
+    geom_point(mapping = aes(Process, mp_weak, col = "OpenMP")) +
+    theme(legend.position = "top")
+
+ggw2 <- ggplot(data = weak)+
+    xlab("N of process (log)") +
+    ylab("T(1)/T(N)") +
+    theme_bw() + 
+    scale_colour_brewer(type = "seq", palette = "Set1") +
+    # scale_y_continuous(breaks = seq(0,650,by=100))+
+    # scale_x_continuous(trans="log2")+
+    geom_line(mapping = aes(Process, ompi_speedup, col = "Open MPI")) +
+    geom_point(mapping = aes(Process, ompi_speedup, col = "Open MPI")) +
+    geom_line(mapping = aes(Process, mp_speedup, col = "OpenMP")) +
+    geom_point(mapping = aes(Process, mp_speedup, col = "OpenMP")) +
+    theme(legend.position = "top")
+
+grid.arrange(ggw1, ggw2, ncol=2)
 
 ```
 
+Here there are two plots to measure the weak scalability. They are created with $10^7$ original data points and multiplied by the number of used processes. As already mentioned above, OpenMP is much better than Open MPI, because the time to build the KD-Tree with 2 dimension is always the same. Indeed, in the plot to the left, there is the "weak scaling efficiency", which calculate the efficiencies as the number of processes increases. The ideal efficency is always 1, where, as the number of processes increase, the time remains constant. But the real efficiency shows a decrease in efficiency with increasing number of processes. 
 
 
-This is the time to serialize the full tree, and it can be aproximate as the sum of the time to serialize each sub-tree for every process.
-
-# Discussion
 
 
-CLOSE the swthreads are placed onto places as close as possible to each other (assigned to consecutive places in a round-robin way)
-aaa
-
-
-Basically, according to this law you will have approximately the same performance as for the lower count of threads. In a real life it will start to decrease at some point (where you have too many threads). You may observe that if you have thousands of threads
 
 # Future implementation
-Al posto di creare un vettore ogni volta, aggiungere come nel quick sort, un inizio e una fine
+As it was mentioned before, the main problem of the parallel algorithm in the Open MPI part was the serialization, but specially the deserialization. In fact, the deserialization function is a recursive function but with some loops that degrades performance. To improve this part, it's possible to improve this function, removing the loops or parallelize them. Another possible solution is removing the entire serialization/deserialization part and, instead of sending the entire sub-tree to the master process, send only a part with his size or send another type instead to the string (std::string is very heavy).
 
-Migliorare la serializzazione e soprattutto la deserializzazione. Oppure mandare altro
+Another mistake that was made, was to add, at every iteration of the function "build_kdtree", two std::vector that corresponds to the points for the left child and the points for the right child of each node. To improve this function, it was better to use another data type or, like in the QuickSort algorith, to use two integer variables that marked the beginning and the end of where the node would go to see to build the left and the right child. 
+
+Furthermore, it was also possible to implement an hybrid code, that takes the advantages of both of the libraries to combine together in one algorithm. 
 
 
 # Bibliografia
 https://www.archer.ac.uk/training/course-material/2017/08/openmp-ox/Slides/L09-TipsTricksGotchas.pdf
+
+https://hpc-wiki.info/hpc/Scaling_tutorial

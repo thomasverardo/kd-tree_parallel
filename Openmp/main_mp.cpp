@@ -38,8 +38,10 @@ int main(int argc, char **argv){
     std::chrono::time_point<std::chrono::high_resolution_clock> start;
     std::chrono::time_point<std::chrono::high_resolution_clock> end;
     struct kdnode<int>* kdtree;
+    double mp_start, mp_end;
 
-    start = std::chrono::high_resolution_clock::now();
+    // start = std::chrono::high_resolution_clock::now();
+    mp_start = omp_get_wtime();
             
     #pragma omp parallel shared(points) private(start, end)
     {
@@ -52,12 +54,14 @@ int main(int argc, char **argv){
         }
     }
 
-    end = std::chrono::high_resolution_clock::now();
+    // end = std::chrono::high_resolution_clock::now();
+    mp_end = omp_get_wtime();
 
-    std::chrono::duration<double> diff = end - start;
+    // std::chrono::duration<double> diff = end - start;
 
     // std::cout<<"\nTime to buld the tree: "<<diff.count() <<" s\n";
-    std::cout<<diff.count()<<std::endl;;
+    // std::cout<<diff.count()<<std::endl;;
+    std::cout<<mp_end-mp_start<<std::endl;
 
     // kdtree -> in_order();
 
