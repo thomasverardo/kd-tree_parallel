@@ -252,7 +252,7 @@ As it was mentioned before, the main problem of the parallel algorithm in the Op
 
 Another mistake that was made, was to add, at every iteration of the function "build_kdtree", two std::vector that corresponds to the points for the left child and the points for the right child of each node. To improve this function, it was better to use another data type or, like in the QuickSort algorith, to use two integer variables that marked the beginning and the end of where the node would go to see to build the left and the right child. 
 
-Furthermore, it was also possible to implement an hybrid code, that takes the advantages of both of the libraries to combine together in one algorithm. 
+Furthermore, it was also possible to implement an hybrid code, that takes the advantages of both of the libraries to combine together in one algorithm. Since the main problem is the serialization and the deserialization of the three, it's possibile to make parallel this part with OpenMP.
 
 
 # Bibliografia
