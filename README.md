@@ -27,11 +27,11 @@ However, here is where the assumption A2 above comes in to simplify this assignm
 #define float_t double
 #endif
 #define NDIM 2
-struct kpoint float_t[NDIM];
-struct kdnode {
-int axis; // the splitting dimension
-kpoint split; // the splitting element
-struct kdnode *left, *right; // the left and right sub-trees
+	struct kpoint float_t[NDIM];
+	struct kdnode {
+	int axis; // the splitting dimension
+	kpoint split; // the splitting element
+	struct kdnode *left, *right; // the left and right sub-trees
 }
 ```
 
@@ -42,15 +42,15 @@ struct kdnode *left, *right; // the left and right sub-trees
 ```
 struct kdnode * build_kdtree( <current data set>, int ndim, int axis )
 {
-// axis is the splitting dimension from the previous call
-// ( may be -1 for the first call)
-int myaxis = (axis+ 1 )%ndim;
-struct kdnode *this_node = (struct kdnode*)malloc(sizeof(struct kdnode));
-this_node.axis = myaxis;
+	// axis is the splitting dimension from the previous call
+	// ( may be -1 for the first call)
+	int myaxis = (axis+ 1 )%ndim;
+	struct kdnode *this_node = (struct kdnode*)malloc(sizeof(struct kdnode));
+	this_node.axis = myaxis;
 
-this_node.left = build_kdtree( <left_points>, ndim, myaxis);
-this_node.right = build_kdtree( <right_points>, ndim, myaxis);
-return this_node;
+	this_node.left = build_kdtree( <left_points>, ndim, myaxis);
+	this_node.right = build_kdtree( <right_points>, ndim, myaxis);
+	return this_node;
 }
 ```
 
