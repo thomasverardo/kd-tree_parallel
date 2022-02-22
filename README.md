@@ -66,34 +66,42 @@ All-in-all, a pseudo algorithm to build a kd- tree may resemplbe to something li
 
 ```
 struct kdnode * build_kdtree( kpoint *points, int N, int ndim, int axis )
-/*
-* points is a pointer to the relevant section of the data set;
-* N is the number of points to be considered, from points to points+N
-* ndim is the number of dimensions of the data points
-* axis is the dimension used previsously as the splitting one
-*/
+	/*
+	* points is a pointer to the relevant section of the data set;
+	* N is the number of points to be considered, from points to points+N
+	* ndim is the number of dimensions of the data points
+	* axis is the dimension used previsously as the splitting one
+	*/
 {
-if( N == 1 ) return a leaf with the point *points;
+	if( N == 1 ) return a leaf with the point *points;
 
-struct kdnode *node;
-//
-// ... here you should either allocate the memory for a new node
-// like in the classical linked-list, or implement something different
-// and more efficient in terms of tree-traversal
-//
-int myaxis = choose_splitting_dimension( points, ndim, axis); //
-implement the choice for
-// the
-splitting dimension
-kpoint *mypoint = choose_splitting_point( points, myaxis); // pick-up
-the splitting point
+	struct kdnode *node;
+	//
+	// ... here you should either allocate the memory for a new node
+	// like in the classical linked-list, or implement something different
+	// and more efficient in terms of tree-traversal
+	//
+	int myaxis = choose_splitting_dimension( points, ndim, axis); //
+	implement the choice for
+	// the
+	splitting dimension
+	kpoint *mypoint = choose_splitting_point( points, myaxis); // pick-up
+	the splitting point
 
-struct kpoint *left_points, *right_points;
-//
-// ... here you individuate the left- and right- points
-//
+	struct kpoint *left_points, *right_points;
+	//
+	// ... here you individuate the left- and right- points
+	//
+
+	node -> axis = myaxis;
+	node -> split = *splitting_point; // here we save a data point, but
+	it's up to youù
+	// to opt to save a pointer, instead
+	node -> left = build_kdtree( left_points, N_left, ndim, myaxis );
+	node -> right = build_kdtree( right_points, N_right, ndim, myaxis );
+	return node;
+}
 ```
-
 
 
 ### Parallelization
@@ -103,16 +111,8 @@ The parallelization strategy may be pretty similar. One of the simplest strategy
 
  For instance, if you have 2 tasks, you may determine the first splitting and hence distribute the data among the two workers. Each task may then proceed independently. The same strategy holds for a larger number of tasks in an abvisou way. If you choose this approach, you can assume to use a number of tasks that is a power of 2.
 
-```
-node -> axis = myaxis;
-node -> split = *splitting_point; // here we save a data point, but
-it's up to youù
-// to opt to save a pointer, instead
-node -> left = build_kdtree( left_points, N_left, ndim, myaxis );
-node -> right = build_kdtree( right_points, N_right, ndim, myaxis );
-return node;
-}
-```
+
+
 1. Jerome Harold Friedman, Jon Louis Bentley, and Raphael Ari Finkel. “An algorithm for finding best matches in logarithmic expected time”. In:
 ACM Transactions on Mathematical Software (TOMS) 3.3 (1977), pp. 209–226. See the materials added in the sub-folder materials/ in the
 assignment folder. ↩
