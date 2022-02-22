@@ -19,11 +19,7 @@ A kd- tree is a tree whose basic concept is to compare against 1 dimension at a 
  In general, the choice of the pivotal point is clearly a critical step in the building of the tree since from that it descends how balanced the resulting tree will be. In fact, a large fraction of theoretical work on trees is exactly about that.
 However, here is where the assumption A2 above comes in to simplify this assignment; since you can assume that your data are homogeneously distributed in every dimension, a simple and good choice is to pick the median element along each dimension.
  Then, the basic data structure for a node of your kd- tree should resemble to something like the following
-
- NOTE: the floating point size of the coordinates could be either float or double; in the code snippet here above you find the way to decide it at compile-time.
-
- A node which has no children node (i.e. left and right are NULL pointers) contains only a data point and is called a leaf. The choice of which is the splitting dimension at each iteration is also critical. A quite common basic choice is to round-robin through the dimensions, like
-
+ 
 ```
 #if !defined(DOUBLE_PRECISION)
 #define float_t float
@@ -38,12 +34,10 @@ kpoint split; // the splitting element
 struct kdnode *left, *right; // the left and right sub-trees
 }
 ```
-This strategy is good enough if the data space is sufficiently “squared”; otherwise, you may end up with nodes extremely elongated along one direction. Moreover, in the previous code snippet the check about the fact that at least 2 points are present in the chosen direction, which is mandatory, is absent.
 
-Another possible and simple strategy is to pick the dimension of maximum extent. In other words, you may check the extent of the data domain along each direction and, if the extents are different by more than a threshold, you choose as current plsitting direction the one with the maximum extent (even if it was used in the previous iteration).
+ NOTE: the floating point size of the coordinates could be either float or double; in the code snippet here above you find the way to decide it at compile-time.
 
-In this seconda case you treat “automatically” the case for strongly degenerated data distribution (in your case imagin a “stripe” distribution along either the or the axis).
-All-in-all, a pseudo algorithm to build a kd- tree may resemplbe to something like the following:
+ A node which has no children node (i.e. left and right are NULL pointers) contains only a data point and is called a leaf. The choice of which is the splitting dimension at each iteration is also critical. A quite common basic choice is to round-robin through the dimensions, like
 
 ```
 struct kdnode * build_kdtree( <current data set>, int ndim, int axis )
@@ -60,6 +54,15 @@ return this_node;
 }
 ```
 
+This strategy is good enough if the data space is sufficiently “squared”; otherwise, you may end up with nodes extremely elongated along one direction. Moreover, in the previous code snippet the check about the fact that at least 2 points are present in the chosen direction, which is mandatory, is absent.
+
+Another possible and simple strategy is to pick the dimension of maximum extent. In other words, you may check the extent of the data domain along each direction and, if the extents are different by more than a threshold, you choose as current plsitting direction the one with the maximum extent (even if it was used in the previous iteration).
+
+In this seconda case you treat “automatically” the case for strongly degenerated data distribution (in your case imagin a “stripe” distribution along either the or the axis).
+All-in-all, a pseudo algorithm to build a kd- tree may resemplbe to something like the following:
+
+
+
 
 ```
 struct kdnode * build_kdtree( kpoint *points, int N, int ndim, int axis )
@@ -71,8 +74,7 @@ struct kdnode * build_kdtree( kpoint *points, int N, int ndim, int axis )
 */
 {
 if( N == 1 ) return a leaf with the point *points;
-```
-```
+
 struct kdnode *node;
 //
 // ... here you should either allocate the memory for a new node
@@ -85,8 +87,7 @@ implement the choice for
 splitting dimension
 kpoint *mypoint = choose_splitting_point( points, myaxis); // pick-up
 the splitting point
-```
-```
+
 struct kpoint *left_points, *right_points;
 //
 // ... here you individuate the left- and right- points
