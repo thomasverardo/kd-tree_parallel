@@ -65,7 +65,7 @@ The main problem of this implemented code with Open MPI is that each sub-tree ha
 
 # Performance scaling and discussion
 
-In this section it will presented the real performance of the function responsible for the construction of the tree in serial and in parallel. Theoretically specking, the performance of the parallel code must be better than the serial, because the work is spitted among the processes/thread.
+In this section it will presented the real performance of the function responsible for the construction of the tree in serial and in parallel. Theoretically specking, the performance of the parallel code must be better than the serial, because the work is spitted among the processes/thread. All tests have been done in ORFEO GPU nodes. 
 To evaluated the performance of the implemented code, the test was done with $10^8$ data points, each composed to 2 dimension. 
 All the compilation are made with an optimization flags (-O3) because, without any optimization option, the compiler’s goal is to reduce the cost of compilation and to make debugging produce the expected results. Turning on optimization flags makes the compiler attempt to improve the performance and/or code size at the expense of compilation time.
 Furthermore, the OpenMP part is compiled with some environment variables that are used to maximise the performance. Those are: 

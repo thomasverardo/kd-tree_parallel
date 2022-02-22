@@ -4,6 +4,9 @@ all:
 mp: 
 	mpic++ -fopenmp Openmp/main_mp.cpp Openmp/kd_tree_mp.cpp -o main_mp.x
 
+mpi_hybrid: 
+	mpic++ -fopenmp mpi_hybrid/main_mpi.cpp mpi_hybrid/kd_tree_mpi.cpp -o main_mpi_hybrid.x
+
 mp_o3: 
 	mpic++ -fopenmp Openmp/main_mp.cpp Openmp/kd_tree_mp.cpp -o main_mp.x -O3
 
@@ -24,6 +27,9 @@ run_ompi:
 
 run_ompi2: 
 	mpirun -np 4 ./main_mpi.x 100000000
+
+run_hybrid: 
+	mpirun -np 5 ./main_mpi_hybrid.x 1000000
 
 val_ompi2:
 	mpirun -np 4 valgrind -s ./main_mpi.x 100000000
