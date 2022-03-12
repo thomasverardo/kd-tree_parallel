@@ -1,6 +1,9 @@
 all:
 	mpic++ Serial/main.cpp Serial/kd_tree.cpp -o main.x -std=c++11 -O3
 	
+v2: 
+	mpic++ Serial/main_v2.cpp Serial/kd_tree_v2.cpp -o main_v2.x -std=c++11 -O3
+	
 mp: 
 	mpic++ -fopenmp Openmp/main_mp.cpp Openmp/kd_tree_mp.cpp -o main_mp.x
 
@@ -15,6 +18,9 @@ mp_debug:
 
 ompi: 
 	mpic++ mpi/main_mpi.cpp mpi/kd_tree_mpi.cpp -o main_mpi.x -O3
+	
+ompi_hybrid: 
+	mpic++ mpi_hybrid/main_mpi_hybrid.cpp mpi_hybrid/kd_tree_mpi_hybrid.cpp -o main_mpi_hybrid.x -O3
 
 ompi_debug:
 	mpic++ mpi/main_mpi.cpp mpi/kd_tree_mpi.cpp -o main_mpi.x -DDEBUG -g
@@ -26,10 +32,10 @@ run_ompi:
 	mpirun -np $(np) ./main_mpi.x 100000000
 
 run_ompi2: 
-	mpirun -np 4 ./main_mpi.x 100000000
+	mpirun -np 4 ./main_mpi.x 1000000
 
 run_hybrid: 
-	mpirun -np 5 ./main_mpi_hybrid.x 1000000
+	mpirun -np 4 ./main_mpi_hybrid.x 1000000
 
 val_ompi2:
 	mpirun -np 4 valgrind -s ./main_mpi.x 100000000
