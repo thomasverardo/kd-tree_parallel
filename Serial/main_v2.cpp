@@ -29,7 +29,8 @@ std::vector<struct kpoint<T>> generatePoints(const int ndim, const int npoints){
 
 int main(int argc, char **argv){
 
-    int n = std::stoi(argv[1]);
+    // int n = std::stoi(argv[1]);
+    int n=5;
 
     int ndim = N_DIM;
 
@@ -43,11 +44,10 @@ int main(int argc, char **argv){
     end = std::chrono::high_resolution_clock::now();
 
 
-    // kdtree -> in_order();
+    kdtree -> in_order();
 
     std::chrono::duration<double> diff = end - start;
 
-    // std::cout<<"\nTime to buld the tree in serial: "<<diff.count() <<" s\n";
     std::cout<<diff.count()<<std::endl;
 
     return 0;

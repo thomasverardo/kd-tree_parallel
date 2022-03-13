@@ -66,7 +66,7 @@ void print_array(kpoint<T> &arr, int n, int axis){
 }
 
 template<typename T>
-std::vector<struct kpoint<T>> choose_splitting_point(std::vector<struct kpoint<T>> points, int n, int myaxis){
+std::vector<struct kpoint<T>> choose_splitting_point(std::vector<struct kpoint<T>> points, int start, int end, int myaxis){
     //use std::nth_element
     //your array won't be sorted, 
     //but you are only guaranteed instead that your nth element is in position n.
@@ -74,9 +74,10 @@ std::vector<struct kpoint<T>> choose_splitting_point(std::vector<struct kpoint<T
     // print_array(*points,n,myaxis);
 
     auto beg = points.begin();
-    int half = n/2;
 
-    std::nth_element(beg, beg + half, points.end(), 
+    int half = (end-start)/2;
+
+    std::nth_element(beg + start, beg + (start + half), beg + end, 
         [&myaxis](kpoint<T>& a, kpoint<T>& b){return a.get_n_point(myaxis) < b.get_n_point(myaxis);}
     );
 
@@ -96,10 +97,10 @@ struct kdnode<T> * build_kdtree( std::vector<struct kpoint<T>> points, int start
 */
 
     struct kdnode<T>* node = new kdnode<T>; 
-    const int N = points.size();
+    const int points_dim = end - start;
     int myaxis = (axis+1) % ndim;
 
-    if( N == 1 ) { //a leaf with the point *points;
+    if( points_dim == 1 ) { //a leaf with the point *points;
 
         node->left = new kdnode<T>;
         node->right = new kdnode<T>;
@@ -109,25 +110,22 @@ struct kdnode<T> * build_kdtree( std::vector<struct kpoint<T>> points, int start
     }else{
 
         //new "sorted" vector
-        auto mypoint = choose_splitting_point( points, N, myaxis);          /////MODIFICARE CHOOSE SPLITTING POINT
+        auto mypoint = choose_splitting_point( points, start, end, myaxis);
 
         // the splitting point
-        int half = N/2;
+        int half = points_dim/2;
 
-        std::vector<struct kpoint<T>> left_points(mypoint.begin(), mypoint.begin() + half);
-        std::vector<struct kpoint<T>> right_points(mypoint.begin() + half + 1, mypoint.end());
-        //+1 so we can delet the splitting point
 
         node->axis = myaxis;
 
         node->split = mypoint.at(half);
 
         // to opt to save a pointer, instead
-        node->left = build_kdtree( mypoint, 0, half, ndim, myaxis );
+        node->left = build_kdtree( mypoint, start, start + half, ndim, myaxis );
 
         //if original size points is 2, is 1 for left, 1 for split and 0 for right;
-        if( N != 2)
-            node -> right = build_kdtree( mypoint, half+1, mypoint.end(), ndim, myaxis );
+        if( points_dim != 2)
+            node -> right = build_kdtree( mypoint, start + half + 1, end, ndim, myaxis );
         else
             node -> right = new kdnode<T>;
         
