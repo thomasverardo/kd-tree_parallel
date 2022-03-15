@@ -31,6 +31,7 @@ struct kdnode {
     kdnode();
 
     void in_order();
+    void pre_order();
 
 };
 

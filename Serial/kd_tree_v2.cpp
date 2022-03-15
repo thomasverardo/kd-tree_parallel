@@ -52,6 +52,20 @@ void kdnode<T>::in_order(){
         }
     }
 
+template<typename T>
+void kdnode<T>::pre_order(){
+
+        if( axis != -1) {
+            
+            
+            this -> split.print_kpoints(axis);
+            left -> in_order();
+            std::cout<<" right: ";
+            right -> in_order();
+
+        }
+    }
+
 
 
 //  ++++++++++       Other functions...      ++++++++++++++++++
@@ -75,9 +89,9 @@ std::vector<struct kpoint<T>> choose_splitting_point(std::vector<struct kpoint<T
 
     auto beg = points.begin();
 
-    int half = (end-start)/2;
+    int half = start + (end-start)/2;
 
-    std::nth_element(beg + start, beg + (start + half), beg + end, 
+    std::nth_element(beg + start, beg + half, beg + end, 
         [&myaxis](kpoint<T>& a, kpoint<T>& b){return a.get_n_point(myaxis) < b.get_n_point(myaxis);}
     );
 
@@ -89,12 +103,12 @@ std::vector<struct kpoint<T>> choose_splitting_point(std::vector<struct kpoint<T
 template<typename T>
 struct kdnode<T> * build_kdtree( std::vector<struct kpoint<T>> points, int start, int end, int ndim, int axis ) {
 
-/*
-* points is a pointer to the relevant section of the data set;
-* N is the number of points to be considered, from points to points+N
-* ndim is the number of dimensions of the data points
-* axis is the dimension used previsously as the splitting one
-*/
+    /*
+    * points is a pointer to the relevant section of the data set;
+    * N is the number of points to be considered, from points to points+N
+    * ndim is the number of dimensions of the data points
+    * axis is the dimension used previsously as the splitting one
+    */
 
     struct kdnode<T>* node = new kdnode<T>; 
     const int points_dim = end - start;
@@ -105,7 +119,7 @@ struct kdnode<T> * build_kdtree( std::vector<struct kpoint<T>> points, int start
         node->left = new kdnode<T>;
         node->right = new kdnode<T>;
         node->axis = myaxis;
-        node->split = points.at(0);
+        node->split = points.at(start);
 
     }else{
 
@@ -113,7 +127,7 @@ struct kdnode<T> * build_kdtree( std::vector<struct kpoint<T>> points, int start
         auto mypoint = choose_splitting_point( points, start, end, myaxis);
 
         // the splitting point
-        int half = points_dim/2;
+        int half = start + points_dim/2;
 
 
         node->axis = myaxis;
@@ -121,11 +135,11 @@ struct kdnode<T> * build_kdtree( std::vector<struct kpoint<T>> points, int start
         node->split = mypoint.at(half);
 
         // to opt to save a pointer, instead
-        node->left = build_kdtree( mypoint, start, start + half, ndim, myaxis );
+        node->left = build_kdtree( mypoint, start, half, ndim, myaxis );
 
         //if original size points is 2, is 1 for left, 1 for split and 0 for right;
         if( points_dim != 2)
-            node -> right = build_kdtree( mypoint, start + half + 1, end, ndim, myaxis );
+            node -> right = build_kdtree( mypoint, half + 1, end, ndim, myaxis );
         else
             node -> right = new kdnode<T>;
         
