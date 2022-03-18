@@ -32,7 +32,7 @@ run_ompi:
 	mpirun -np $(np) ./main_mpi.x 100000000
 
 run_ompi2: 
-	mpirun -np 4 ./main_mpi.x 1000000
+	mpirun -np 4 ./main_mpi.x 10
 
 run_hybrid: 
 	mpirun -np 4 ./main_mpi_hybrid.x 1000000
