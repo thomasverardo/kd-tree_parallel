@@ -110,6 +110,41 @@ struct kdnode * build_kdtree( kpoint *points, int N, int ndim, int axis )
 The parallelization strategy may be pretty similar. One of the simplest strategy, given assumptions A1 and A2, is that you may distribute the data among your processes/threads (let’s call them “tasks” in the following, meaning either MPI processes or OpenMP threads).
 
  For instance, if you have 2 tasks, you may determine the first splitting and hence distribute the data among the two workers. Each task may then proceed independently. The same strategy holds for a larger number of tasks in an abvisou way. If you choose this approach, you can assume to use a number of tasks that is a power of 2.
+ 
+ 
+ 
+## How to run on ORFEO
+
+```
+module load openmpi-4.1.1+gnu-9.3.0
+```
+
+Serial code:
+
+```
+make
+
+./main.x N -->  where N is the number of points
+```
+
+OpenMP code:
+
+```
+make mp
+
+./main_mp.x N --> where N is the number of points
+```
+
+Open MPI code:
+
+```
+make ompi
+
+make run_ompi np=NP --> where NP is the number of processes
+make run_ompi3 np=NP n=N --> where NP is the number of processes and N the number of points
+make run_ompi2 --> with default configuration
+```
+
 
 
 
